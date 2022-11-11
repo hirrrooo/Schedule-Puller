@@ -1,82 +1,63 @@
+# Schedule-Puller.py 
+# by hirrrooo
+
 import pandas as pd
 from gcsa.event import Event
 from gcsa.google_calendar import GoogleCalendar
 from gcsa.recurrence import Recurrence, DAILY, SU, SA
 from datetime import date, datetime
+from pathlib import Path
+import numpy as np
+from beautiful_date import *
 
 
-# column 2-9
-# assign days to column #  2 Sunday, 8 Saturday
-# line 11 Date, consistent
+data_folder = Path('schedule')
+Schedule = data_folder / 'Welcome.html'
+tables = pd.read_html(Schedule)
 
-target = r'/home/based/Projects/Schedule Puller/schedule/Welcome.html'
-tables = pd.read_html(target) # Returns list of all tables on page
+shifts_dates = [tables[15][i][7] for i in range(2,9)] # ['Sun 10/30', 'Mon 10/31', 'Tue 11/1', 'Wed 11/2', 'Thu 11/3', 'Fri 11/4', 'Sat 11/5']
+shifts = [tables[15][i][11] for i in range(2,9)] # ['9:30 AM-6:00 PM', nan, nan, nan, nan, nan, '9:00 AM-5:30 PM']
+shifts = list(map(str, shifts)) # Makes every item in a list a string.
+shifts = [item.replace('nan', '') for item in shifts] # Replaces nan (float), with a empty string.
+zipped = [list(i) for i in zip(shifts_dates, shifts)] # [['Sun 10/30', '9:30 AM-6:00 PM'], ['Mon 10/31', nan], ['Tue 11/1', nan], ['Wed 11/2', nan], ['Thu 11/3', nan], ['Fri 11/4', nan], ['Sat 11/5', '9:00 AM-5:30 PM']]
 
-# for i in range(2,9): # table 15, column # (2-9), line (11)
-#     # print(tables[15][i][7])
-#     # print(tables[15][i][11])
-#     events = tables[15][i][11]
 
-# def shiftdate(month, day):
-#     d = date(year=2022, month, day)
+def convert24(str1):
+    # if element is blank, return blank.
+    # Checking if last two elements of time
+    # is AM and first two elements are 12
+    if str1 == '':
+        return ''
 
-shifts_dates = [tables[15][i][7] for i in range(2,9)]
-shifts = [tables[15][i][11] for i in range(2,9)]
+    elif str1[-2:] == "AM" and str1[:2] == "12":
+        return "00" + str1[2:-2]
+         
+    # remove the AM    
+    elif str1[-2:] == "AM":
+        return str1[:-2]
+     
+    # Checking if last two elements of time
+    # is PM and first two elements are 12
+    elif str1[-2:] == "PM" and str1[:2] == "12":
+        return str1[:-2]
+         
+    else:
+        # add 12 to hours and remove PM
+        return str(int(str1[:2]) + 12) + str1[2:8]
 
-print(shifts)
-print(shifts_dates)
-seperated = str(shifts_dates)
-# print(seperated.split('/'))
+ShiftStartTimes = [i.split('-')[0] for i in shifts]
+ShiftStartTimes = [convert24(times) for times in ShiftStartTimes]
+print(ShiftStartTimes)
 
-# grouped = [item for sublist in zip(shifts_dates, shifts) for item in sublist]
-# print(grouped)
+# ShiftEndTimes = [i.split('-')[0] for i in shifts]
 
-zipped = [list(i) for i in zip(shifts_dates, shifts)]
-
-print(zipped[1][1])
-
-zippedplus = [zipped[i] for i in range(0,7)]
-
-print(zippedplus)
-
-if 'nan' in str(zipped[1][1]):
-    print("success")
-
-from beautiful_date import Apr, hours
-from gcsa.event import Event
-
-def create_event(date, time, time_2):
-    start = (date)[time]
-    end = (date)[time_2]
+def create_event(month, day, hour, minute, year = 2022):
+    start = (month, day, hour, minute, year))
+    end = (datetime(month, day, hour, minute, year))
     event = Event('Meeting',
                 start=start,
                 end=end)
-# date = 
-# month =
-# shiftdate(month, day)
 
-
-# calendar = GoogleCalendar('iamhirojl@gmail.com')
-
-# convert month # to month in name, keep day value same and replace, 2022 default
-
-def make_schedule():
-    event = Event(
-        'Wegmans',
-        start=(1 / Jan / 2022)[9:00],
-        recurrence=[
-            Recurrence.rule(freq=DAILY),
-            Recurrence.exclude_rule(by_week_day=[SU, SA]),
-            Recurrence.exclude_times([
-                (19 / Apr / 2022)[9:00],
-                (22 / Apr / 2022)[9:00]
-            ])
-        ],
-        minutes_before_email_reminder=50
-    )
-    # calendar.add_event(event) # add so this runs after 
-
-
-
-# for event in calendar:
-    # print(event)
+# from beautiful_date import *
+# d = 25/Mar/2018
+# t = (25/Mar/2018)[23:45]
